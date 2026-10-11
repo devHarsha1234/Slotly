@@ -36,7 +36,7 @@ const CustomerAppointments = () => {
 
   const filtered = appointments.filter((apt) => {
     if (filter === 'all') return true;
-    if (filter === 'upcoming') return ['scheduled', 'confirmed'].includes(apt.status);
+    if (filter === 'upcoming') return ['scheduled', 'confirmed', 'serving'].includes(apt.status);
     if (filter === 'active') return apt.status === 'serving';
     return apt.status === filter;
   });

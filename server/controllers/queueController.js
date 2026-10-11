@@ -4,6 +4,60 @@ const ServiceRecord = require('../models/ServiceRecord');
 const Business = require('../models/Business');
 const { recalculateQueue } = require('../services/queueService');
 const { updateServiceExpectedDuration } = require('../services/learningService');
+const { generateUniqueQueueToken } = require('../utils/tokenGenerator');
+
+// @desc    Get active queue entry for the authenticated customer
+// @route   GET /api/queue/customer/active
+// @access  Private
+const getMyActiveQueueEntry = async (req, res, next) => {
+  try {
+    const customerId = req.user._id;
+
+    // Find all appointment IDs for this customer
+    const userAppointments = await Appointment.find({ customer: customerId }).select('_id');
+    const appointmentIds = userAppointments.map((a) => a._id);
+
+    // Query authoritatively for this customer's active entry
+    // Matches either direct customer reference or through appointment
+    const activeEntry = await QueueEntry.findOne({
+      $or: [
+        { customer: customerId },
+        { appointment: { $in: appointmentIds } }
+      ],
+      status: { $in: ['waiting', 'serving'] }
+    })
+    .populate('service')
+    .populate('business')
+    .populate('staff', 'name role')
+    .populate('customer', 'name email phone')
+    .populate({
+      path: 'appointment',
+      select: 'scheduledStart scheduledEnd expectedDuration status source customer date',
+      populate: { path: 'customer', select: 'name email phone' }
+    })
+    .sort({ status: -1, position: 1 });
+
+    let servingEntry = null;
+    if (activeEntry) {
+      const bId = activeEntry.business._id || activeEntry.business;
+      servingEntry = await QueueEntry.findOne({
+        business: bId,
+        status: 'serving'
+      }).select('token');
+    }
+
+    res.json({
+      success: true,
+      data: activeEntry ? {
+        entry: activeEntry,
+        position: activeEntry.position,
+        servingToken: servingEntry ? servingEntry.token : 'None'
+      } : null
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // @desc    Get live queue for a business
 // @route   GET /api/queue/:businessId
@@ -53,6 +107,9 @@ const startService = async (req, res, next) => {
     if (entry.appointment) {
       await Appointment.findByIdAndUpdate(entry.appointment, { status: 'serving' });
     }
+
+    const businessId = entry.business._id || entry.business;
+    await recalculateQueue(businessId, entry.staff);
 
     res.json({ success: true, data: entry });
   } catch (error) {
@@ -143,12 +200,13 @@ const addWalkIn = async (req, res, next) => {
     }
     
     const position = await QueueEntry.countDocuments({ business: businessId, staff: staffId, status: { $in: ['waiting', 'serving'] } }) + 1;
+    const token = await generateUniqueQueueToken(businessId, 'W');
     
     const entry = await QueueEntry.create({
       business: businessId,
       service: serviceId,
       staff: staffId,
-      token: `W-${Math.floor(Math.random() * 1000)}`,
+      token,
       position,
       estimatedStart: new Date(),
       estimatedWaitMinutes: 0
@@ -195,6 +253,7 @@ const updateQueueStatus = async (req, res, next) => {
 };
 
 module.exports = {
+  getMyActiveQueueEntry,
   getQueue,
   startService,
   completeService,

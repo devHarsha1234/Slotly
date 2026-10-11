@@ -4,6 +4,7 @@ const Service = require('../models/Service');
 const QueueEntry = require('../models/QueueEntry');
 const Staff = require('../models/Staff');
 const { recalculateQueue } = require('../services/queueService');
+const { generateUniqueQueueToken } = require('../utils/tokenGenerator');
 
 // @desc    Book an appointment
 // @route   POST /api/appointments
@@ -46,14 +47,15 @@ const createAppointment = async (req, res, next) => {
     const query = { business: businessId, status: { $in: ['waiting', 'serving'] } };
     if (staffId) query.staff = staffId;
     const position = await QueueEntry.countDocuments(query) + 1;
+    const token = await generateUniqueQueueToken(businessId, 'A');
     
-    await QueueEntry.create({
+    const queueEntry = await QueueEntry.create({
       appointment: appointment._id,
       customer: req.user._id,
       business: businessId,
       service: serviceId,
       staff: staffId || undefined,
-      token: `A-${Math.floor(100 + Math.random() * 900)}`,
+      token,
       position,
       estimatedStart: startTime,
       estimatedWaitMinutes: 0
@@ -61,7 +63,7 @@ const createAppointment = async (req, res, next) => {
 
     await recalculateQueue(businessId, staffId);
 
-    res.status(201).json({ success: true, data: appointment });
+    res.status(201).json({ success: true, data: appointment, queueEntry });
   } catch (error) {
     next(error);
   }
