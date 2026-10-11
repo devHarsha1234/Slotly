@@ -109,8 +109,19 @@ const ProviderDashboard = () => {
               <div className="p-8 flex flex-col h-full justify-center">
                 <div className="flex justify-between items-start mb-6">
                   <div>
-                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Customer</p>
-                    <p className="text-3xl font-black text-gray-900">{serving.customer ? serving.customer.name : 'Walk-in'}</p>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Customer</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        serving.appointment && serving.appointment.source !== 'walk_in'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {serving.appointment && serving.appointment.source !== 'walk_in' ? 'Scheduled Booking' : 'Walk-in'}
+                      </span>
+                    </div>
+                    <p className="text-3xl font-black text-gray-900">
+                      {serving.customer?.name || serving.appointment?.customer?.name || (serving.token.startsWith('W-') ? 'Walk-in Customer' : 'Customer')}
+                    </p>
                     <p className="text-gray-500 font-medium mt-1">{serving.service?.name}</p>
                   </div>
                   <div className="bg-gray-100 text-gray-800 text-sm px-4 py-2 rounded-lg font-bold">
@@ -154,12 +165,22 @@ const ProviderDashboard = () => {
                     delay = Math.round((new Date(item.estimatedStart).getTime() - new Date(item.appointment.scheduledStart).getTime()) / 60000);
                   }
                   
+                  const isWalkIn = !item.appointment || item.appointment?.source === 'walk_in' || item.token.startsWith('W-');
+                  const customerName = item.customer?.name || item.appointment?.customer?.name || (isWalkIn ? 'Walk-in Customer' : 'Customer');
+
                   return (
                     <div key={item._id} className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-300 transition">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <p className="font-bold text-gray-900">{item.customer ? item.customer.name : 'Walk-in'}</p>
-                          <p className="text-xs text-gray-500 font-medium">{item.service?.name}</p>
+                          <div className="flex items-center space-x-2">
+                            <p className="font-bold text-gray-900">{customerName}</p>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                              !isWalkIn ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {!isWalkIn ? 'Scheduled' : 'Walk-in'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 font-medium mt-0.5">{item.service?.name}</p>
                         </div>
                         <div className="bg-white border border-gray-200 px-2 py-1 rounded text-xs font-bold text-gray-700">
                           {item.token}

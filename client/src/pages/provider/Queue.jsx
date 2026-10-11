@@ -176,10 +176,10 @@ const ProviderQueue = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-bold text-gray-900">
-                        {item.customer ? item.customer.name : 'Walk-in Customer'}
+                        {item.customer?.name || item.appointment?.customer?.name || (item.token?.startsWith('W-') ? 'Walk-in Customer' : 'Customer')}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {item.appointment ? 'Scheduled Booking' : 'Walk-in'}
+                        {item.appointment && item.appointment.source !== 'walk_in' ? 'Scheduled Booking' : 'Walk-in'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-600">
@@ -338,7 +338,9 @@ const ProviderQueue = () => {
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-sm">
                 <div className="flex justify-between text-gray-600 mb-1">
                   <span>Customer:</span>
-                  <span className="font-bold text-gray-900">{completeItem.customer?.name || 'Walk-in'}</span>
+                  <span className="font-bold text-gray-900">
+                    {completeItem.customer?.name || completeItem.appointment?.customer?.name || (completeItem.token?.startsWith('W-') ? 'Walk-in Customer' : 'Customer')}
+                  </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Expected Duration:</span>

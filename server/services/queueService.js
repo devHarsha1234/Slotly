@@ -30,6 +30,7 @@ const recalculateQueue = async (businessId, staffId, referenceStartTime) => {
     const entry = entries[i];
     
     if (entry.status === 'serving') {
+      entry.position = i + 1;
       const durationMs = entry.service.expectedDurationMinutes * 60 * 1000;
       const actualStart = entry.actualStart || entry.estimatedStart || now;
       const elapsedMs = now.getTime() - new Date(actualStart).getTime();
@@ -37,8 +38,10 @@ const recalculateQueue = async (businessId, staffId, referenceStartTime) => {
       if (remainingMs < 0) remainingMs = 5 * 60 * 1000; // If overdue, expect at least 5 more mins
       
       currentStartTime = new Date(now.getTime() + remainingMs);
+      await entry.save();
     } else {
       // It's waiting
+      entry.position = i + 1;
       const oldETA = entry.estimatedStart;
       
       // Compute new estimated start time:
@@ -61,11 +64,12 @@ const recalculateQueue = async (businessId, staffId, referenceStartTime) => {
       await entry.save();
       
       // If ETA changed by > 10 mins and it has a customer, notify
-      if (oldETA && entry.customer) {
+      const customerId = entry.customer || entry.appointment?.customer;
+      if (oldETA && customerId) {
         const diffMins = Math.abs((entry.estimatedStart.getTime() - new Date(oldETA).getTime()) / 60000);
         if (diffMins > 10) {
           const recent = await Notification.findOne({
-            recipient: entry.customer,
+            recipient: customerId,
             relatedAppointment: entry.appointment?._id || entry.appointment,
             createdAt: { $gte: new Date(Date.now() - 30 * 60000) }
           });
@@ -73,7 +77,7 @@ const recalculateQueue = async (businessId, staffId, referenceStartTime) => {
             const isLate = entry.estimatedStart > new Date(oldETA);
             const delayAmount = Math.round(diffMins);
             await Notification.create({
-              recipient: entry.customer,
+              recipient: customerId,
               type: 'ETA_UPDATE',
               title: isLate ? 'Delay Notification' : 'Schedule Update',
               message: isLate 

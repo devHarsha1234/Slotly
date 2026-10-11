@@ -66,7 +66,7 @@ const CustomerQueue = () => {
             if (!myEntry) return null;
 
             const myIndex = businessQueue.findIndex(q => q._id === myEntry._id);
-            const position = Math.max(0, myIndex);
+            const position = myEntry.position || (myIndex >= 0 ? myIndex + 1 : 1);
 
             return (
               <div key={apt._id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -80,7 +80,9 @@ const CustomerQueue = () => {
                   <div className="grid grid-cols-2 gap-4 text-center sm:text-right">
                     <div>
                       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Position</p>
-                      <p className="text-2xl font-bold">#{position}</p>
+                      <p className="text-2xl font-bold">
+                        {myEntry.status === 'serving' ? 'Serving' : `#${position}`}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Est Wait</p>

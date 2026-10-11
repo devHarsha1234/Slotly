@@ -29,7 +29,7 @@ const CustomerDashboard = () => {
           const servingEntry = qList.find(q => q.status === 'serving');
           
           if (myEntry) {
-            const position = Math.max(0, qList.findIndex(q => q._id === myEntry._id));
+            const position = myEntry.position || (qList.findIndex(q => q._id === myEntry._id) + 1);
             setQueueData({
               entry: myEntry,
               position,
@@ -59,7 +59,9 @@ const CustomerDashboard = () => {
 
   return (
     <div className="max-w-4xl mx-auto font-sans">
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-8 tracking-tight">Good morning, {user?.name?.split(' ')[0]}</h1>
+      <h1 className="text-3xl font-extrabold text-gray-900 mb-8 tracking-tight">
+        Welcome back, {user?.name?.split(' ')[0] || 'there'}
+      </h1>
       
       {nextApt ? (
         <div className="mb-10">
@@ -95,21 +97,32 @@ const CustomerDashboard = () => {
                   <h3 className="text-sm font-bold tracking-widest text-primary-600 uppercase flex items-center">
                     <Activity className="w-4 h-4 mr-2" /> Your Live Queue
                   </h3>
-                  <span className="text-xs font-bold bg-primary-100 text-primary-800 px-2 py-1 rounded">Live</span>
+                  <span className="text-xs font-bold bg-primary-100 text-primary-800 px-2.5 py-1 rounded-full">
+                    {queueData.entry.status === 'serving' ? 'Currently Serving' : 'Live Adaptive Queue'}
+                  </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Position</p>
-                    <p className="text-2xl font-black text-gray-900">#{queueData.position}</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Queue Position</p>
+                    <p className="text-2xl font-black text-gray-900">
+                      {queueData.entry.status === 'serving' ? 'In Service' : `#${queueData.position}`}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Token: <span className="font-bold text-gray-700">{queueData.entry.token}</span></p>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Est Wait</p>
-                    <p className="text-2xl font-black text-primary-600">{queueData.entry.estimatedWaitMinutes}m</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Updated ETA</p>
+                    <p className="text-2xl font-black text-primary-600">
+                      {format(new Date(queueData.entry.estimatedStart), 'h:mm a')}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {queueData.entry.status === 'serving' ? 'Being served now' : `~${queueData.entry.estimatedWaitMinutes}m wait`}
+                    </p>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Serving</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Now Serving</p>
                     <p className="text-2xl font-black text-gray-900">{queueData.servingToken}</p>
+                    <p className="text-xs text-gray-500 mt-1">Active customer token</p>
                   </div>
                 </div>
               </div>

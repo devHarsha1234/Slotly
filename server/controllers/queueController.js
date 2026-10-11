@@ -15,8 +15,13 @@ const getQueue = async (req, res, next) => {
       status: { $in: ['waiting', 'serving'] }
     })
     .populate('service')
-    .populate('customer', 'name')
-    .populate('appointment', 'scheduledStart')
+    .populate('customer', 'name email phone')
+    .populate({
+      path: 'appointment',
+      select: 'scheduledStart scheduledEnd expectedDuration status source customer',
+      populate: { path: 'customer', select: 'name email phone' }
+    })
+    .populate('staff', 'name role')
     .sort({ position: 1 });
     
     res.json({ success: true, data: entries });
