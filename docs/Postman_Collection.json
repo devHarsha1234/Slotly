@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "Slotly Core APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Provider",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Provider\",\n  \"email\": \"test@provider.com\",\n  \"phone\": \"1234567890\",\n  \"password\": \"Password@123\",\n  \"role\": \"provider\",\n  \"businessName\": \"Test Clinic\",\n  \"businessCategory\": \"Health\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@provider.com\",\n  \"password\": \"Password@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Queue & Adaptive",
+      "item": [
+        {
+          "name": "Get Queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_TOKEN"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:5000/api/queue/BUSINESS_ID",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "queue",
+                "BUSINESS_ID"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Complete Service (Triggers Adaptive Engine)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer YOUR_TOKEN"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actualDurationMinutes\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/queue/QUEUE_ID/complete",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "queue",
+                "QUEUE_ID",
+                "complete"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
