@@ -104,56 +104,70 @@ const CustomerDashboard = () => {
                   <h3 className="text-sm font-bold tracking-widest text-primary-600 uppercase flex items-center">
                     <Activity className="w-4 h-4 mr-2" /> Your Live Queue
                   </h3>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                  <span className={`text-xs font-black px-2.5 py-1 rounded-full ${
                     queueData.entry.status === 'serving'
-                      ? 'bg-green-100 text-green-800 border border-green-200'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse'
                       : 'bg-primary-100 text-primary-800'
                   }`}>
-                    {queueData.entry.status === 'serving' ? '● Serving You Now' : 'Live Adaptive Queue'}
+                    {queueData.entry.status === 'serving' ? '● Now Serving You' : 'Live Adaptive Queue'}
                   </span>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Card 1: Customer's Own Token & Position */}
-                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className={`p-4 rounded-xl border shadow-sm ${
+                    queueData.entry.status === 'serving' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-white border-gray-200'
+                  }`}>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Your Token</p>
                     <p className="text-3xl font-black text-gray-900 tracking-tight">
                       {queueData.entry.token}
                     </p>
-                    <p className="text-xs font-semibold text-gray-600 mt-1">
+                    <p className={`text-xs font-bold mt-1 ${
+                      queueData.entry.status === 'serving' ? 'text-emerald-700' : 'text-gray-600'
+                    }`}>
                       {queueData.entry.status === 'serving'
-                        ? 'Position: Now Serving'
+                        ? 'Position: Currently In Service'
                         : `Queue Position: #${queueData.position}`}
                     </p>
                   </div>
 
                   {/* Card 2: Updated ETA / Live Timing */}
-                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className={`p-4 rounded-xl border shadow-sm ${
+                    queueData.entry.status === 'serving' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-white border-gray-200'
+                  }`}>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
                       {queueData.entry.status === 'serving' ? 'Service Status' : 'Updated ETA'}
                     </p>
-                    <p className="text-2xl font-black text-primary-600">
+                    <p className={`text-2xl font-black ${
+                      queueData.entry.status === 'serving' ? 'text-emerald-700' : 'text-primary-600'
+                    }`}>
                       {queueData.entry.status === 'serving'
-                        ? 'In Progress'
+                        ? 'In Service'
                         : format(new Date(queueData.entry.estimatedStart), 'h:mm a')}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {queueData.entry.status === 'serving'
-                        ? 'Being served right now'
+                        ? 'Provider is attending to you now'
                         : `~${queueData.entry.estimatedWaitMinutes}m estimated wait`}
                     </p>
                   </div>
 
                   {/* Card 3: Now Serving Token (explicitly separate from your token) */}
-                  <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className={`p-4 rounded-xl border shadow-sm ${
+                    queueData.entry.status === 'serving' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-white border-gray-200'
+                  }`}>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Currently Serving</p>
                     <p className="text-2xl font-black text-gray-900">
                       {queueData.servingToken}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {queueData.entry.token === queueData.servingToken
+                    <p className={`text-xs font-bold mt-1 ${
+                      queueData.entry.status === 'serving' ? 'text-emerald-700' : 'text-gray-500'
+                    }`}>
+                      {queueData.entry.status === 'serving'
                         ? 'You are at the front!'
-                        : 'Current token in service'}
+                        : queueData.entry.token === queueData.servingToken
+                        ? 'You are next in line!'
+                        : 'Token in service'}
                     </p>
                   </div>
                 </div>

@@ -87,10 +87,13 @@ const CustomerAppointments = () => {
         {filtered.length > 0 ? (
           filtered.map((apt) => {
             const isUpcoming = ['scheduled', 'confirmed'].includes(apt.status);
+            const isServing = apt.status === 'serving';
             return (
               <div
                 key={apt._id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:border-gray-300 transition gap-4"
+                className={`bg-white rounded-2xl shadow-sm border p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center hover:border-gray-300 transition gap-4 ${
+                  isServing ? 'border-emerald-300 bg-emerald-50/20' : 'border-gray-200'
+                }`}
               >
                 <div className="space-y-2">
                   <div className="flex items-center space-x-3">
@@ -101,12 +104,12 @@ const CustomerAppointments = () => {
                           ? 'bg-green-100 text-green-800 border border-green-200'
                           : apt.status === 'cancelled'
                           ? 'bg-red-100 text-red-800 border border-red-200'
-                          : apt.status === 'serving'
-                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                          : isServing
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse font-extrabold'
                           : 'bg-blue-100 text-blue-800 border border-blue-200'
                       }`}
                     >
-                      {apt.status}
+                      {isServing ? '● In Service Now' : apt.status}
                     </span>
                   </div>
 
@@ -128,6 +131,14 @@ const CustomerAppointments = () => {
                 </div>
 
                 <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-3 pt-3 sm:pt-0 border-t sm:border-0 border-gray-100">
+                  {isServing && (
+                    <Link
+                      to="/customer/queue"
+                      className="inline-flex items-center text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 px-3.5 py-2 rounded-lg shadow-sm transition"
+                    >
+                      Track Live Queue <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                    </Link>
+                  )}
                   {isUpcoming && (
                     <div className="flex items-center space-x-2">
                       <Link
@@ -144,7 +155,7 @@ const CustomerAppointments = () => {
                       </button>
                     </div>
                   )}
-                  {!isUpcoming && (
+                  {!isUpcoming && !isServing && (
                     <span className="text-xs text-gray-400 italic">No pending actions</span>
                   )}
                 </div>

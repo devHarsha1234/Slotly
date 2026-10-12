@@ -5,8 +5,13 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const sess = sessionStorage.getItem('user');
+      if (sess) return JSON.parse(sess);
+      const loc = localStorage.getItem('user');
+      if (loc) return JSON.parse(loc);
+    } catch (e) {}
+    return null;
   });
 
   const [loading, setLoading] = useState(true);
@@ -27,12 +32,18 @@ export const AuthProvider = ({ children }) => {
   }, [user?.token]);
 
   const login = (userData) => {
-    localStorage.setItem('user', JSON.stringify(userData));
+    try {
+      sessionStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (e) {}
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
+    try {
+      sessionStorage.removeItem('user');
+      localStorage.removeItem('user');
+    } catch (e) {}
     setUser(null);
   };
 

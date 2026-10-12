@@ -2,6 +2,9 @@ const QueueEntry = require('../models/QueueEntry');
 const Appointment = require('../models/Appointment');
 const ServiceRecord = require('../models/ServiceRecord');
 const Business = require('../models/Business');
+const Service = require('../models/Service');
+const Staff = require('../models/Staff');
+const User = require('../models/User');
 const { recalculateQueue } = require('../services/queueService');
 const { updateServiceExpectedDuration } = require('../services/learningService');
 const { generateUniqueQueueToken } = require('../utils/tokenGenerator');
@@ -17,14 +20,13 @@ const getMyActiveQueueEntry = async (req, res, next) => {
     const userAppointments = await Appointment.find({ customer: customerId }).select('_id');
     const appointmentIds = userAppointments.map((a) => a._id);
 
-    // Query authoritatively for this customer's active entry
-    // Matches either direct customer reference or through appointment
-    const activeEntry = await QueueEntry.findOne({
+    // 1. Authoritatively prioritize finding if this customer has a currently 'serving' entry
+    let activeEntry = await QueueEntry.findOne({
       $or: [
         { customer: customerId },
         { appointment: { $in: appointmentIds } }
       ],
-      status: { $in: ['waiting', 'serving'] }
+      status: 'serving'
     })
     .populate('service')
     .populate('business')
@@ -34,8 +36,28 @@ const getMyActiveQueueEntry = async (req, res, next) => {
       path: 'appointment',
       select: 'scheduledStart scheduledEnd expectedDuration status source customer date',
       populate: { path: 'customer', select: 'name email phone' }
-    })
-    .sort({ status: -1, position: 1 });
+    });
+
+    // 2. If not currently serving, find their next 'waiting' entry (ordered by position ascending)
+    if (!activeEntry) {
+      activeEntry = await QueueEntry.findOne({
+        $or: [
+          { customer: customerId },
+          { appointment: { $in: appointmentIds } }
+        ],
+        status: 'waiting'
+      })
+      .populate('service')
+      .populate('business')
+      .populate('staff', 'name role')
+      .populate('customer', 'name email phone')
+      .populate({
+        path: 'appointment',
+        select: 'scheduledStart scheduledEnd expectedDuration status source customer date',
+        populate: { path: 'customer', select: 'name email phone' }
+      })
+      .sort({ position: 1, estimatedStart: 1 });
+    }
 
     let servingEntry = null;
     if (activeEntry) {

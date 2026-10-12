@@ -7,7 +7,16 @@ const api = axios.create({
 // Add a request interceptor to add the auth token
 api.interceptors.request.use(
   (config) => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    let user = null;
+    try {
+      const sess = sessionStorage.getItem('user');
+      if (sess) user = JSON.parse(sess);
+      if (!user) {
+        const loc = localStorage.getItem('user');
+        if (loc) user = JSON.parse(loc);
+      }
+    } catch (e) {}
+
     if (user && user.token) {
       config.headers.Authorization = `Bearer ${user.token}`;
     }
@@ -21,7 +30,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('user');
+      try {
+        sessionStorage.removeItem('user');
+        localStorage.removeItem('user');
+      } catch (e) {}
       window.location.href = '/login';
     }
     

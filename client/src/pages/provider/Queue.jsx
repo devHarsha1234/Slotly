@@ -200,7 +200,11 @@ const ProviderQueue = () => {
                         {format(new Date(item.estimatedStart), 'hh:mm a')}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {isServing ? 'In service' : `Wait: ~${item.estimatedWaitMinutes}m`}
+                        {isServing 
+                          ? 'In service' 
+                          : item.estimatedWaitMinutes <= 0 
+                          ? 'Starting now' 
+                          : `Wait: ~${item.estimatedWaitMinutes}m`}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">

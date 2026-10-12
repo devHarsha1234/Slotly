@@ -18,43 +18,36 @@ All 4 test suites (customer identity regression, core acceptance & delay propaga
 
 ## Part A: Bugs Discovered & Fixed
 
-### 1. Customer-to-Queue Identity Desynchronization & Token Overwrite
+### 1. Customer-to-Queue Identity Desynchronization & Multi-Tab Session Isolation
 
 * **Bug Description:**
-  In a multi-customer queue scenario, when Provider served Customer 1 (Umesh Patil, Token `A-592`) and Customer 2 (Ajit Bhosale, Token `A-768`) was waiting:
-  - Provider Queue: `#1 A-592 (serving)` | `#2 A-768 (waiting)`
-  - Umesh Dashboard: Shown Token `A-768`, Position `#2`
-  - Ajit Dashboard: Shown Token `A-768`, Position `#2`
-  Both customers saw Ajit's token and position, masking Umesh's active serving status.
+  In a multi-customer queue scenario, when Provider served Customer 1 (Umesh Patil, Token `A-550`) and Customer 2 (Ajit Bhosale, Token `A-560`) was waiting:
+  - Provider Queue: `#1 A-550 (serving)` | `#2 A-560 (waiting)`
+  - Umesh Dashboard & Queue: Top card displayed Ajit's token `A-560`, Position `#2`, and Timeline showed TWO `[YOU]` badges on both `A-550` and `A-560`.
+  - Ajit Dashboard & Queue: Displayed Token `A-560`, Position `#2` while waiting, and `Serving` when promoted.
 
-* **Root Cause:**
-  Three compounding flaws across backend and frontend:
-  1. **Frontend Active Appointment Filter:** In `CustomerDashboard.jsx` and `CustomerAppointments.jsx`, appointments were filtered with `['scheduled', 'confirmed'].includes(a.status)`. Once an appointment transitioned to `serving`, it was omitted from the active appointment list.
-  2. **Fragile Client-Side Queue Mapping:** The frontend fetched the public business queue (`GET /queue/:businessId`) and attempted to find the customer's entry by matching `nextApt._id`. Because Umesh's active appointment was filtered out, the code fell back to subsequent appointments or mismatched IDs. Furthermore, walk-in customers without pre-booked appointment IDs had no way to locate their queue entry.
-  3. **Absence of an Authoritative Customer-Scoped Queue Endpoint:** There was no backend endpoint that securely queried the database for the authenticated user's (`req.user._id`) active queue entry.
+* **Root Causes Isolated:**
+  1. **Multi-Tab Token Overwriting in `localStorage`:** When evaluators open multiple customer tabs in the same browser (Provider, Customer 1, Customer 2), all tabs share one origin `localStorage`. Logging in as Customer 2 overwrote the stored JWT in `localStorage`. When Customer 1's tab made an API request, the Axios interceptor grabbed Customer 2's token from `localStorage`, while Customer 1's React memory (`useAuth`) still held Customer 1's profile.
+  2. **Inverted String Collation in Mongoose Sorting:** `getMyActiveQueueEntry` performed `.sort({ status: -1, position: 1 })`. In MongoDB ASCII collation, `"waiting"` (119) is strictly greater than `"serving"` (115), so a descending sort (`-1`) placed `"waiting"` BEFORE `"serving"`.
+  3. **Duplicate `[YOU]` Matching in Timeline:** `CustomerQueue.jsx` evaluated `isMe` using `q._id === myEntry._id || (q.customer && q.customer._id === user?._id)`. This loose Boolean matching allowed two separate queue entries to receive the `[YOU]` badge.
+  4. **Appointments List Status Drop:** `CustomerAppointments.jsx` defined `isUpcoming = ['scheduled', 'confirmed'].includes(apt.status)`, omitting `'serving'`. When an appointment transitioned to serving, the "Track Queue" action button vanished and reverted to "No pending actions".
 
 * **Files Involved:**
   - `server/controllers/queueController.js`
-  - `server/routes/queueRoutes.js`
+  - `client/src/services/api.js`
+  - `client/src/context/AuthContext.jsx`
+  - `client/src/pages/customer/Queue.jsx`
   - `client/src/pages/customer/Dashboard.jsx`
   - `client/src/pages/customer/Appointments.jsx`
-  - `client/src/pages/customer/Queue.jsx`
+  - `client/src/pages/provider/Queue.jsx`
 
-* **Fix Implemented:**
-  - **New Authoritative Endpoint:** Implemented `GET /api/queue/customer/active` in `queueController.js` and registered it in `queueRoutes.js` (placed before `/:businessId` to avoid Express routing collision).
-  - **Database Query:** Finds the customer's active queue entry directly using:
-    ```javascript
-    const activeEntry = await QueueEntry.findOne({
-      $or: [
-        { customer: customerId },
-        { appointment: { $in: customerAppointmentIds } }
-      ],
-      status: { $in: ['waiting', 'serving'] }
-    }).populate('business', 'name address phone').populate('staff', 'name').populate('service', 'name durationPrice');
-    ```
-  - **Serving Token Context:** Queries the business's current `serving` entry to return `{ entry: activeEntry, servingToken: currentlyServing?.token || null }`.
-  - **Customer UI Refactoring:** `Dashboard.jsx` and `Queue.jsx` now consume `/api/queue/customer/active`. Active appointment filters now include `'serving'` (`['scheduled', 'confirmed', 'serving'].includes(apt.status)`).
-  - **Dynamic Serving Banner:** When `entry.status === 'serving'`, customer sees a highlighted "You are currently being served!" status card with Position 1 and 0 minutes wait time.
+* **Fixes Implemented:**
+  - **Per-Tab Session Storage Isolation:** Configured `AuthContext.jsx` and `api.js` to prioritize `sessionStorage` for each tab with fallback to `localStorage`. Opening separate customer and provider tabs in the same browser session guarantees zero session overwrite.
+  - **Explicit Serving Prioritization:** Rewrote `getMyActiveQueueEntry` to query `status: 'serving'` first. If and only if no entry is serving, it queries `status: 'waiting'` sorted by `position: 1, estimatedStart: 1`.
+  - **Strict Single-Entry Timeline Matching:** Enforced `const isMe = q._id === myEntry._id;` in `CustomerQueue.jsx`. Exactly one entry can ever receive the `[YOU]` badge.
+  - **Distinct Serving UX & Themes:** When a customer is being served, the header and timeline switch to an Emerald "NOW SERVING YOU" theme with pulsing indicator, 0m wait time, and "In Service" status.
+  - **Action Button Preservation:** `Appointments.jsx` now explicitly recognizes `apt.status === 'serving'` and renders a dedicated `Track Live Queue` action button.
+  - **Negative Wait Time Guard:** Provider queue displays "Starting now" when estimated wait is 0 or negative.
 
 * **Regression Test Added:**
   `server/tests/customer_identity_regression_test.js`
